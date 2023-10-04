@@ -126,8 +126,8 @@ class Robot_c:
     self.score = 0
     self.radius = 5 # 5cm radius
     self.wheel_sep = self.radius*2 # wheel on either side
-    self.vl = 0
-    self.vr = 0
+    self.v = 0
+    self.w = 0
 
     # This is the body plan of sensors from
     # an e-puck robot! (in radians)
@@ -146,26 +146,78 @@ class Robot_c:
       self.prox_sensors.append( ProxSensor_c(self.radius, self.sensor_dirs[i]) )
 
 
-  def updatePosition( self, vl, vr ):
+  # def updatePosition( self, vl, vr ):
+  #
+  #   if vl > 1.0:
+  #     vl = 1.0
+  #   if vl < -1.0:
+  #     vl = -1.0
+  #   if vr > 1.0:
+  #     vr = 1.0
+  #   if vr < -1.0:
+  #     vr = -1.0
+  #
+  #   # save requested wheel speed for later.
+  #   self.vl = vl
+  #   self.vr = vr
+  #
+  #   # clear stall flag, attempt move
+  #   self.stall = -1
+  #
+  #   # robot matrix, contributions to motion x,y,theta
+  #   r_matrix = [(vl/2)+(vr/2),
+  #               0,
+  #               (vr-vl)/self.wheel_sep]
+  #
+  #   # kinematic matrix
+  #   k_matrix = [
+  #               [ np.cos(self.theta),-np.sin(self.theta),0],
+  #               [ np.sin(self.theta), np.cos(self.theta),0],
+  #               [0,0,1]
+  #              ]
+  #
+  #   result_matrix = np.matmul(k_matrix, r_matrix)
+  #
+  #   self.x += result_matrix[0]
+  #   self.y += result_matrix[1]
+  #   self.theta -= result_matrix[2]
+  #
+  #   # Once we have updated the robots new global position
+  #   # we should also update the position of its sensor(s)
+  #   for prox_sensor in self.prox_sensors:
+  #     prox_sensor.updateGlobalPosition( self.x, self.y, self.theta )
 
-    if vl > 1.0:
-      vl = 1.0
-    if vl < -1.0:
-      vl = -1.0
-    if vr > 1.0:
-      vr = 1.0
-    if vr < -1.0:
-      vr = -1.0
+  def updatePosition( self, v, w ):
+
+    # if vl > 1.0:
+    #   vl = 1.0
+    # if vl < -1.0:
+    #   vl = -1.0
+    # if vr > 1.0:
+    #   vr = 1.0
+    # if vr < -1.0:
+    #   vr = -1.0
+
+    # v can only be 0 or 1
+    if v not in [1, -1]:
+      v = 0
+
+    # v can only be -1, 1 or 0
+    if w not in [1, -1]:
+      w = 0
+    else:
+      # convert w to 1 degree in rads
+      w = pi/180
 
     # save requested wheel speed for later.
-    self.vl = vl
-    self.vr = vr
+    self.v = v
+    self.w = w
 
     # clear stall flag, attempt move
     self.stall = -1
 
     # robot matrix, contributions to motion x,y,theta
-    r_matrix = [(vl/2)+(vr/2),0, (vr-vl)/self.wheel_sep]
+    r_matrix = [v, 0, w]
 
     # kinematic matrix
     k_matrix = [
@@ -174,7 +226,7 @@ class Robot_c:
                 [0,0,1]
                ]
 
-    result_matrix = np.matmul( k_matrix, r_matrix)
+    result_matrix = np.matmul(k_matrix, r_matrix)
 
     self.x += result_matrix[0]
     self.y += result_matrix[1]
@@ -184,7 +236,6 @@ class Robot_c:
     # we should also update the position of its sensor(s)
     for prox_sensor in self.prox_sensors:
       prox_sensor.updateGlobalPosition( self.x, self.y, self.theta )
-
 
 
   # The sensor checks if it is in range to an obstruction,
@@ -260,8 +311,8 @@ class Controller_c:
     # speeds to later send to the motors
     # Motor velocity should be in the range
     # [ -1.0 : +1.0 ]
-    vl = 1 #0.2
-    vr = 1 #0.2
+    v = 1 #0.2
+    w = 0 #0.2
 
     # # Read sensor 0 and store the result
     # # Note, use robot.prox_sensors[ n ].reading
@@ -300,5 +351,5 @@ class Controller_c:
 
     # This controller should always return
     # vl, vr
-    return vl, vr
+    return v, w
 

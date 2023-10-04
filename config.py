@@ -13,7 +13,7 @@ def update_simulator(i, x, y, theta):
                          ylim=(0, arena_width))
 
     # Initialise plotted robot
-    # gui_robot, = ax.plot([], [], 'bo', ms=robot_radius * 2)
+    gui_robot, = ax.plot([], [], 'bo', ms=robot_radius * 2)
     gui_robot.set_data([], [])
     gui_dir, = ax.plot([], [], 'r-', c="black")
     # gui_sensor = ax.plot(*[[],[]]*num_sensors,'r-', c="red")
