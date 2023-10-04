@@ -2,8 +2,6 @@
 import numpy as np
 import matplotlib.pyplot as plt
 from obstacles_c import *
-from obstacles_c import Obstacle_c
-from obstacles_c import Controller_c
 import config
 
 # Constants which define the simulator
@@ -40,15 +38,15 @@ my_robot = Robot_c(arena_width/10,
 #   gui_obstacles.set_data( obstacles_xy[:,0], obstacles_xy[:,1]  )
 
 # An instance of our controller!
-my_controller = Controller_c()
+# my_controller = Controller_c()
 
 for i in range(numframes):
     print(i, end='\t')
-    v, w = my_controller.update( my_robot )
+    v, w = 1, 0 #my_controller.update( my_robot )
 
     # # Update robot position, check for collision,
     # # then update sensors.9+
-    my_robot.updatePosition(v, w)
+    my_robot.updatePosition(i, v, w)
     print(round(my_robot.x,3), round(my_robot.y,3))
 
     # if obstacles:
@@ -56,4 +54,4 @@ for i in range(numframes):
     #     my_robot.collisionCheck( obstacle )
     #     my_robot.updateSensors( obstacle )
 
-    config.update_simulator(i, my_robot.x, my_robot.y, my_robot.theta)
+    # config.update_simulator(i, my_robot.x, my_robot.y, my_robot.theta)

@@ -1,5 +1,13 @@
 from math import *
 import numpy as np
+import matplotlib.pyplot as plt
+import config
+
+arena_width = 200
+robot_radius = 5
+
+
+
 
 class Obstacle_c:
 
@@ -145,58 +153,36 @@ class Robot_c:
     for i in range(0,8):
       self.prox_sensors.append( ProxSensor_c(self.radius, self.sensor_dirs[i]) )
 
+  def update_simulator(self, i):
+    # Setup plot
+    fig = plt.figure(dpi=120)
+    ax = fig.add_subplot(111, aspect='equal',
+                         autoscale_on=False,
+                         xlim=(0, arena_width),
+                         ylim=(0, arena_width))
 
-  # def updatePosition( self, vl, vr ):
-  #
-  #   if vl > 1.0:
-  #     vl = 1.0
-  #   if vl < -1.0:
-  #     vl = -1.0
-  #   if vr > 1.0:
-  #     vr = 1.0
-  #   if vr < -1.0:
-  #     vr = -1.0
-  #
-  #   # save requested wheel speed for later.
-  #   self.vl = vl
-  #   self.vr = vr
-  #
-  #   # clear stall flag, attempt move
-  #   self.stall = -1
-  #
-  #   # robot matrix, contributions to motion x,y,theta
-  #   r_matrix = [(vl/2)+(vr/2),
-  #               0,
-  #               (vr-vl)/self.wheel_sep]
-  #
-  #   # kinematic matrix
-  #   k_matrix = [
-  #               [ np.cos(self.theta),-np.sin(self.theta),0],
-  #               [ np.sin(self.theta), np.cos(self.theta),0],
-  #               [0,0,1]
-  #              ]
-  #
-  #   result_matrix = np.matmul(k_matrix, r_matrix)
-  #
-  #   self.x += result_matrix[0]
-  #   self.y += result_matrix[1]
-  #   self.theta -= result_matrix[2]
-  #
-  #   # Once we have updated the robots new global position
-  #   # we should also update the position of its sensor(s)
-  #   for prox_sensor in self.prox_sensors:
-  #     prox_sensor.updateGlobalPosition( self.x, self.y, self.theta )
+    # Initialise plotted robot
+    gui_robot, = ax.plot([], [], 'bo', ms=self.radius * 2)
+    gui_robot.set_data([], [])
+    gui_dir, = ax.plot([], [], 'r-', c="black")
+    # gui_sensor = ax.plot(*[[],[]]*num_sensors,'r-', c="red")
+    gui_obstacles, = ax.plot([], [], 'bo', ms=24, c="orange")
 
-  def updatePosition( self, v, w ):
+    # Draw robot at position x, y
+    gui_robot.set_data(self.x, self.y)
 
-    # if vl > 1.0:
-    #   vl = 1.0
-    # if vl < -1.0:
-    #   vl = -1.0
-    # if vr > 1.0:
-    #   vr = 1.0
-    # if vr < -1.0:
-    #   vr = -1.0
+    # Draw little indicator to show which direction robot is facing
+    tx = self.x + (self.radius * 1.4 * np.cos(self.theta))
+    ty = self.y + (self.radius * 1.4 * np.sin(self.theta))
+    gui_dir.set_data((self.x, tx), (self.y, ty))
+
+    # Output
+    fig.canvas.draw()
+    fig.canvas.flush_events()
+    plt.savefig(f'str{i}.png')
+
+
+  def updatePosition( self, i, v, w ):
 
     # v can only be 0 or 1
     if v not in [1, -1]:
@@ -237,6 +223,8 @@ class Robot_c:
     for prox_sensor in self.prox_sensors:
       prox_sensor.updateGlobalPosition( self.x, self.y, self.theta )
 
+    self.update_simulator(i)
+
 
   # The sensor checks if it is in range to an obstruction,
   # and if yes, calculates the simulated proximity reading.
@@ -274,82 +262,11 @@ class Robot_c:
     # Reward motor activation / penalise no movement
     vel = (np.abs(self.vl) + np.abs(self.vr))/2
 
-
-
     new_score = vel * diff
-
-
 
     if self.stall == 1:
       new_score -= 3
 
     self.score += new_score
 
-
-#
-# Create controller code within def update(self, robot):
-#
-# The logical controller has been copied here for
-# you to make a start.
-#
-# Make sure you return vl and vr at the end of
-# update to move your simulated robot.
-#
-class Controller_c:
-
-  # This function is called again and again
-  # by the simulator to decide what the robot
-  # should do.
-  # Remember to follow a general rule of:
-  # 1) sense (read sensors)
-  # 2) plan (decide something)
-  # 3) act (set motor speeds)
-  def update( self, robot ):
-
-    # We will use vl and vr (velocity-left
-    # and velocity-right) to store motor
-    # speeds to later send to the motors
-    # Motor velocity should be in the range
-    # [ -1.0 : +1.0 ]
-    v = 1 #0.2
-    w = 0 #0.2
-
-    # # Read sensor 0 and store the result
-    # # Note, use robot.prox_sensors[ n ].reading
-    # # where n is in the range [ 0 : 7 ] for
-    # # the 8 sensors around the body.
-    # sensor0 = robot.prox_sensors[0].reading
-    # #sensor1 = robot.prox_sensors[1].reading
-    # #sensor2 = robot.prox_sensors[2].reading
-    # # etc...
-
-    # # Make a decision for motor speeds based
-    # # on sensor0.  Note, sensors always return
-    # # a value between [0:20], or -1 if they have
-    # # not detected something.
-    # if sensor0 >= 0:
-    #   if sensor0 < 10:
-
-    #     # We set the left velocity negative,
-    #     # which would mean backwards
-    #     vl = -0.3
-
-    #     # We set the right velocity positive,
-    #     # which would mean forwards.
-    #     vr = 0.3
-
-    #   elif sensor0 < 15:
-    #     # We set the left velocity negative,
-    #     # which would mean backwards
-    #     vl = -0.1
-
-    #     # We set the right velocity positive,
-    #     # which would mean forwards.
-    #     vr = 0.1
-
-
-
-    # This controller should always return
-    # vl, vr
-    return v, w
 
