@@ -48,9 +48,13 @@ my_robot = Robot_c(arena_width/10,
 
 gui_robot, = ax.plot([], [], 'bo', ms=my_robot.radius*2)
 gui_robot.set_data([], [])
-gui_dir, = ax.plot([], [], 'r-', c="yellow")
+
+gui_dir, = ax.plot([], [], 'r-', c="black")
 gui_sensor = ax.plot(*[[],[]]*num_sensors,'r-', c="red")
 gui_obstacles, = ax.plot([],[],'bo', ms=24, c="orange")
+# x = 100#np.linspace(0, 10*np.pi, 100)
+# y = 100#np.sin(x)
+# line1, = ax.plot(x, y, 'bo')
 
 if obstacles:
   # A list of obstacles within the space
@@ -82,6 +86,17 @@ for i in range(numframes):
 
     # Draw the robot, change colour for collision
     gui_robot.set_data(my_robot.x, my_robot.y)
+
+    # Draw a little indicator so we can see which
+    # way the robot is facing
+    tx = my_robot.x + (my_robot.radius*1.4*np.cos(my_robot.theta))
+    ty = my_robot.y + (my_robot.radius*1.4*np.sin(my_robot.theta))
+    gui_dir.set_data( (my_robot.x,tx), (my_robot.y, ty) )
+
+    # Output
+    fig.canvas.draw()
+    fig.canvas.flush_events()
+    plt.savefig(f'str{i}.png')
 
     # plt.savefig(f'{str(i)}.jpeg')
 
