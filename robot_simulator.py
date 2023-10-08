@@ -233,8 +233,8 @@ class Robot_c:
       gui_robot.set_color("blue")
 
     # Draw little indicator to show which direction robot is facing
-    tx = self.x + (self.radius * 1.4 * np.cos(self.theta))
-    ty = self.y + (self.radius * 1.4 * np.sin(self.theta))
+    tx = self.x + (self.radius * 2 * np.cos(self.theta))
+    ty = self.y + (self.radius * 2 * np.sin(self.theta))
     gui_dir.set_data((self.x, tx), (self.y, ty))
 
     # Draw the sensor beams
