@@ -11,15 +11,20 @@ class Obstacle_c:
   # Assigns itself a random position within
   # the arena, keeping a set distance from
   # the centre
-  def __init__(self, arena_size=200, radius=10, rot=0.0, max_obstacles=1):
+  # def __init__(self, arena_size=200, radius=10, rot=0.0, max_obstacles=1):
+  #
+  #   self.radius = radius
+  #
+  #   # For defined placement
+  #   rot_ang = rot * ((np.pi*2)/max_obstacles)
+  #   rand_dist = np.random.uniform(.35, .65) * (arena_size/2)
+  #   self.x = (arena_size/2) + rand_dist*np.cos(rot_ang)
+  #   self.y = (arena_size/2) + rand_dist*np.sin(rot_ang)
+  def __init__(self, x, y, radius=10):
 
     self.radius = radius
-
-    # For defined placement
-    rot_ang = rot * ((np.pi*2)/max_obstacles)
-    rand_dist = np.random.uniform(.35, .65) * (arena_size/2)
-    self.x = (arena_size/2) + rand_dist*np.cos(rot_ang)
-    self.y = (arena_size/2) + rand_dist*np.sin(rot_ang)
+    self.x = x #(arena_size/2) + rand_dist*np.cos(rot_ang)
+    self.y = y # (arena_size/2) + rand_dist*np.sin(rot_ang)
 
 
 # The model of the proximity sensor.
@@ -38,7 +43,7 @@ class ProxSensor_c:
   offset_angl = 0
 
   # maximum scan range:
-  max_range = 20
+  max_range = 10
 
   # constructor. by default, sensor sits 10 distance forward
   # and faces 0 radians with respect to robot origin (0,0).
@@ -98,7 +103,7 @@ class ProxSensor_c:
     # This will either leave the reading as -1 (invalid)
     # for the next call.  Or leave the reading as the
     # last valid reading (>-1) it had.
-    if angle_between > np.pi/8:
+    if angle_between > np.pi/2:
       return
 
     # If the current reading is -1 then that means
@@ -108,13 +113,14 @@ class ProxSensor_c:
       self.reading = distance
 
     # If the sensor already has a valid reading (>-1)
-    # then we only store the new reading if it is closer.
+    # from another obstacle then we only store the new
+    # reading if it is closer.
     # (closer obstructions block the field of view)
     if self.reading > 0:
       if distance < self.reading:
         self.reading = distance
 
-
+    self.reading = distance
 
 # The model of the robot.
 class Robot_c:
@@ -139,21 +145,30 @@ class Robot_c:
     self.output_video_filename =  'simulation_video.mp4'
     self.x_path = [] # a series of x coordinates of all points visited
     self.y_path = []  # a series of x coordinates of all points visited
+    self.obstacles_flag = True
+    self.n_sensors = 4
+    # self.obstacles_x = [125, 150, 130, 50]
+    # self.obstacles_y = [100, 50, 175, 75]
 
     # This is the body plan of sensors from
     # an e-puck robot! (in radians)
-    self.sensor_dirs = [5.986479,
-                        5.410521,
-                        4.712389,
-                        3.665191,
-                        2.617994,
-                        1.570796,
-                        0.8726646,
-                        0.296706,
+    # self.sensor_dirs = [5.986479,
+    #                     5.410521,
+    #                     4.712389,
+    #                     3.665191,
+    #                     2.617994,
+    #                     1.570796,
+    #                     0.8726646,
+    #                     0.296706,
+    #                     ]
+    self.sensor_dirs = [0,
+                        pi/2,
+                        pi*3/2,
+                        pi,
                         ]
 
     self.prox_sensors = [] #= ProxSensor_c()
-    for i in range(0,8):
+    for i in range(0,self.n_sensors):
       self.prox_sensors.append( ProxSensor_c(self.radius, self.sensor_dirs[i]) )
 
     # Create a file to store output data
@@ -177,6 +192,15 @@ class Robot_c:
 
   def update_simulator(self):
 
+    for obstacle in obstacles:
+      self.collisionCheck(obstacle)
+      self.updateSensors(obstacle)
+
+    for i in range(self.n_sensors):
+      print(f'sensor {i}= {round(self.prox_sensors[i].reading, 2)}', end='\t')
+    print()
+
+
     # Setup plot
     fig = plt.figure(dpi=120)
     ax = fig.add_subplot(111, aspect='equal',
@@ -186,31 +210,45 @@ class Robot_c:
 
     # Initialise plotted robot
     gui_robot, = ax.plot([], [], 'bo', ms=self.radius * 2)
-    # gui_robot.set_data([], [])
     gui_dir, = ax.plot([], [], 'k-')
     gui_path, = ax.plot([], [], 'r:')
-    # gui_sensor = ax.plot(*[[],[]]*num_sensors,'r-')
-    gui_obstacles, = ax.plot([], [], 'mo', ms=24)
+    gui_sensor = ax.plot(*[[],[]]*self.n_sensors,'r-')
+    gui_obstacles, = ax.plot([], [], 'mo', markersize=20)
 
-    # Add x,y coordinates to series
+    # Add x,y coordinates to series of points visited
     self.x_path.append(self.x)
     self.y_path.append(self.y)
+
+    if self.obstacles_flag:
+      gui_obstacles.set_data(obstacles_x, obstacles_y)
 
     # Draw path taken so far
     gui_path.set_data(self.x_path, self.y_path)
 
     # Draw robot at position x, y
     gui_robot.set_data(self.x, self.y)
+    if self.stall == 1:
+      gui_robot.set_color("red")
+    else:
+      gui_robot.set_color("blue")
 
     # Draw little indicator to show which direction robot is facing
     tx = self.x + (self.radius * 1.4 * np.cos(self.theta))
     ty = self.y + (self.radius * 1.4 * np.sin(self.theta))
     gui_dir.set_data((self.x, tx), (self.y, ty))
 
+    # Draw the sensor beams
+    for i in range(self.n_sensors):
+      prox_sensor = self.prox_sensors[i]
+      ox = prox_sensor.x
+      oy = prox_sensor.y
+      tx = prox_sensor.x + np.cos(prox_sensor.theta)
+      ty = prox_sensor.y + np.sin(prox_sensor.theta)
 
+      gui_sensor[i].set_data((ox, tx), (oy, ty))
 
     msg = f'time = {self.t} \t \t x = {round(self.x, 3)} \t \t y = {round(self.y, 3)} \t \t theta = {round(self.theta, 3)}'
-    print(msg)
+    print(msg, end='\t')
 
     with open(self.output_data_filename, mode="a") as f:
       f.write(msg + '\n')
@@ -345,6 +383,17 @@ class Robot_c:
 
     # Publish video
     out.release()
+
+
+# Create obstacles
+# num_obstacles = 4
+obstacles_x = [125, 150] # [125, 150, 130, 50]
+obstacles_y = [100, 50] # [100, 50, 175, 75]
+obstacles = []
+obstacles_xy = []
+for i, (x, y) in enumerate(zip(obstacles_x, obstacles_y)):
+  obstacles.append( Obstacle_c(x, y))
+  # obstacles_xy.append( [obstacles[i].x, obstacles[i].y] )
 
 # Create an instance of the simulated Robot at initial position
 x_init = 100
