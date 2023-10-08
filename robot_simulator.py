@@ -3,7 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import glob
 import cv2
-from os import listdir
+from os import listdir, remove
 from os.path import isfile, join
 
 class Obstacle_c:
@@ -131,9 +131,14 @@ class Robot_c:
     self.score = 0
     self.radius = 5 # 5cm radius
     self.wheel_sep = self.radius*2 # wheel on either side
-    self.v = 0
-    self.w = 0
+    self.v = 0 # linear velocity
+    self.w = 0 # angular velocity
     self.arena_width = 200
+    self.t = 0 # simulation timestep
+    self.output_data_filename = 'simulation_data.txt'
+    self.output_video_filename =  'simulation_video.mp4'
+    self.x_path = [] # a series of x coordinates of all points visited
+    self.y_path = []  # a series of x coordinates of all points visited
 
     # This is the body plan of sensors from
     # an e-puck robot! (in radians)
@@ -151,7 +156,26 @@ class Robot_c:
     for i in range(0,8):
       self.prox_sensors.append( ProxSensor_c(self.radius, self.sensor_dirs[i]) )
 
-  def update_simulator(self, i):
+    # Create a file to store output data
+    with open(self.output_data_filename, mode="w") as f:
+      pass
+
+    # Remove all frames used to generate previous video
+    path_in = 'img/'
+    try:
+      files = listdir(path_in)
+      for file in files:
+        file_path = join(path_in, file)
+        if isfile(file_path):
+          remove(file_path)
+      # remove(self.output_video_filename)
+      print("All files deleted successfully.")
+    except OSError:
+      print("Error occurred while deleting files.")
+
+    self.update_simulator()
+
+  def update_simulator(self):
 
     # Setup plot
     fig = plt.figure(dpi=120)
@@ -162,10 +186,18 @@ class Robot_c:
 
     # Initialise plotted robot
     gui_robot, = ax.plot([], [], 'bo', ms=self.radius * 2)
-    gui_robot.set_data([], [])
-    gui_dir, = ax.plot([], [], 'r-', c="black")
-    # gui_sensor = ax.plot(*[[],[]]*num_sensors,'r-', c="red")
-    gui_obstacles, = ax.plot([], [], 'bo', ms=24, c="orange")
+    # gui_robot.set_data([], [])
+    gui_dir, = ax.plot([], [], 'k-')
+    gui_path, = ax.plot([], [], 'r:')
+    # gui_sensor = ax.plot(*[[],[]]*num_sensors,'r-')
+    gui_obstacles, = ax.plot([], [], 'mo', ms=24)
+
+    # Add x,y coordinates to series
+    self.x_path.append(self.x)
+    self.y_path.append(self.y)
+
+    # Draw path taken so far
+    gui_path.set_data(self.x_path, self.y_path)
 
     # Draw robot at position x, y
     gui_robot.set_data(self.x, self.y)
@@ -176,19 +208,27 @@ class Robot_c:
     gui_dir.set_data((self.x, tx), (self.y, ty))
 
 
-    print(f'time = {i}      x = {round(self.x, 3)}      y = {round(self.y, 3)}')
-    plt.title(f'time = {i}         x = {round(self.x, 3)}         y = {round(self.y, 3)}')
+
+    msg = f'time = {self.t} \t \t x = {round(self.x, 3)} \t \t y = {round(self.y, 3)} \t \t theta = {round(self.theta, 3)}'
+    print(msg)
+
+    with open(self.output_data_filename, mode="a") as f:
+      f.write(msg + '\n')
+
+    plt.title(f'time = {self.t}      x = {round(self.x, 3)}      y = {round(self.y, 3)}      theta = {round(self.theta, 3)}')
 
     # Output
     fig.canvas.draw()
     fig.canvas.flush_events()
-    plt.savefig("img/{:02d}_{}".format(i, '.png')) # Use 02d modifierfor two-digit numbers (zero-padded)
-    # plt.savefig(f'img/{i}.png')
+    plt.savefig("img/{:05d}_{}".format(self.t, '.png')) # Use 02d modifierfor 5-digit numbers (zero-padded)
+
+    # Update timestep
+    self.t += 1
 
 
-  def updatePosition( self, i, v, w ):
+  def updatePosition( self, v, w ):
 
-    # v can only be 0 or 1
+    # linear velocity can only be -1, 1 or 0
     if v not in [1, -1]:
       v = 0
 
@@ -197,9 +237,13 @@ class Robot_c:
       w = 0
     else:
       # convert w to 1 degree in rads
-      w = pi/180
+      w = -w * pi/180
 
-    # save requested wheel speed for later.
+    if v and w:
+      v = 0
+      w = 0
+
+    # Save parameters for later.
     self.v = v
     self.w = w
 
@@ -227,8 +271,7 @@ class Robot_c:
     for prox_sensor in self.prox_sensors:
       prox_sensor.updateGlobalPosition( self.x, self.y, self.theta )
 
-    self.update_simulator(i)
-
+    self.update_simulator()
 
   # The sensor checks if it is in range to an obstruction,
   # and if yes, calculates the simulated proximity reading.
@@ -275,9 +318,10 @@ class Robot_c:
 
   def make_video(self):
 
-    path_out = 'simulation_video.mp4'
+    path_out = self.output_video_filename
     path_in = 'img/'
-    fps = 10
+
+    fps = 15
     files = [f for f in listdir(path_in) if isfile(join(path_in, f)) and f.endswith(".png")]
     files.sort()
     frame_array = []
@@ -302,16 +346,12 @@ class Robot_c:
     # Publish video
     out.release()
 
-# An instance of the simulated Robot at initial position
-x_init = 20
-y_init = 20
+# Create an instance of the simulated Robot at initial position
+x_init = 100
+y_init = 50
 theta_init = np.pi/2
 robot = Robot_c(x_init, y_init, theta_init)
-# my_robot = Robot_c(arena_width/10,
-#                    arena_width/10,
-#                    np.pi/2)
 
-# Rename the Robot method for updating position
+# Rename Robot methods for easy use in main program
 update_simulation = robot.updatePosition
-
-output_simulation_video = robot.make_video
+save_simulation_data = robot.make_video
