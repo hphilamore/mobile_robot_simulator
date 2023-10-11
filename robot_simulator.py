@@ -91,7 +91,7 @@ class ProxSensor_c:
     # (e.g. where is the object relative to the sensor?)
     a2o = atan2( ( obstruction.y - self.y), (obstruction.x-self.x ))
 
-    # computer the smallest angle between the line of
+    # compute the smallest angle between the line of
     # sight of the sensor, and the current angle to the
     # obstruction.
     # [insert url here]
@@ -146,7 +146,7 @@ class Robot_c:
     self.x_path = [] # a series of x coordinates of all points visited
     self.y_path = []  # a series of x coordinates of all points visited
     self.obstacles_flag = True
-    self.n_sensors = 4
+
     # self.obstacles_x = [125, 150, 130, 50]
     # self.obstacles_y = [100, 50, 175, 75]
 
@@ -166,6 +166,7 @@ class Robot_c:
                         pi*3/2,
                         pi,
                         ]
+    self.n_sensors = len(self.sensor_dirs)
 
     self.prox_sensors = [] #= ProxSensor_c()
     for i in range(0,self.n_sensors):
@@ -213,7 +214,9 @@ class Robot_c:
     gui_dir, = ax.plot([], [], 'k-')
     gui_path, = ax.plot([], [], 'r:')
     gui_sensor = ax.plot(*[[],[]]*self.n_sensors,'r-')
-    gui_obstacles, = ax.plot([], [], 'mo', markersize=20)
+
+    obstacle_radius = obstacles[0].radius
+    gui_obstacles, = ax.plot([], [], 'mo', ms=obstacle_radius*2)
 
     # Add x,y coordinates to series of points visited
     self.x_path.append(self.x)
@@ -325,7 +328,14 @@ class Robot_c:
     distance = np.sqrt( ((obstruction.x - self.x)**2) + ((obstruction.y - self.y)**2) )
     distance -= self.radius
     distance -= obstruction.radius
+
+    print('distance= ', round(distance,2), end='\t')
+
+    # If distance from robot to object becomes negative,
+    # transform to positive distance from robot to object
+    # so the robot never comes into contact with the object.
     if distance < 0:
+      # Set a flag to show obstacle encountered
       self.stall = 1
       angle = atan2( obstruction.y - self.y, obstruction.x - self.x)
       self.x += distance * np.cos(angle)
