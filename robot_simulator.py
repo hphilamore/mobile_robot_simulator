@@ -267,10 +267,23 @@ class Robot_c:
 
     result_matrix = np.matmul(k_matrix, r_matrix)
 
-    # attempt move
+    # Attempt move
     self.x += result_matrix[0]
     self.y += result_matrix[1]
     self.theta -= result_matrix[2]
+
+    # Cap x and y position at limits of simulation arena
+    if self.x > self.arena_width - self.radius:
+      self.x = self.arena_width - self.radius
+
+    if self.x < self.radius:
+      self.x = self.radius
+
+    if self.y > self.arena_width - self.radius:
+      self.y = self.arena_width - self.radius
+
+    if self.y < self.radius:
+      self.y = self.radius
 
     # Once we have updated the robots new global position
     # we should also update the position of its sensor(s)
