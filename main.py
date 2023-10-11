@@ -1,5 +1,3 @@
-# TODO: If collision, block movement correctly (i.e. if obstacle on left, can't turn left, if obstacle in front can't go forward)
-
 # TODO: Exercises
 # TODO: FOOD: If food found (stall = True) break out of loop, use random to choose direction. Treat wall as obstacle
 # TODO: OBSTACLE: If obstacle encountered, including wall, devise strategy to move around/away from it
@@ -8,6 +6,7 @@
 # TODO: Delete previous video at start of code
 
 from robot_simulator import *  # Starts simulator
+
 
 plt.ion()
 

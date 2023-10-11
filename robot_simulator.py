@@ -157,10 +157,10 @@ class Robot_c:
     self.arena_width = 200
     self.t = 0 # simulation timestep
     self.output_data_filename = 'simulation_data.txt'
-    self.output_video_filename =  'simulation_video.mp4'
+    self.output_video_filename = 'simulation_video.mp4'
     self.x_path = [] # a series of x coordinates of all points visited
     self.y_path = []  # a series of x coordinates of all points visited
-    self.obstacles_flag = True
+    # self.obstacles_flag = True
 
     # self.obstacles_x = [125, 150, 130, 50]
     # self.obstacles_y = [100, 50, 175, 75]
@@ -233,12 +233,12 @@ class Robot_c:
     # # Save parameters for later.
     # self.v = v
     # self.w = w
-
-    for obstacle in obstacles:
-      # Detect collision
-      self.collisionCheck(obstacle)
-      # Update sensors and direction of obstacle
-      self.updateSensors(obstacle)
+    if obstacles:
+      for obstacle in obstacles:
+        # Detect collision
+        self.collisionCheck(obstacle)
+        # Update sensors and direction of obstacle
+        self.updateSensors(obstacle)
 
     for i in range(self.n_sensors):
       print(f'sensor {i}= {round(self.prox_sensors[i].reading, 2)}', end='\t')
@@ -297,20 +297,19 @@ class Robot_c:
                          xlim=(0, self.arena_width),
                          ylim=(0, self.arena_width))
 
+    # Add x,y coordinates to series of points visited
+    self.x_path.append(self.x)
+    self.y_path.append(self.y)
+
     # Initialise plotted robot
     gui_robot, = ax.plot([], [], 'bo', ms=self.radius * 2.5)
     gui_dir, = ax.plot([], [], 'k-')
     gui_path, = ax.plot([], [], 'r:')
     gui_sensor = ax.plot(*[[],[]]*self.n_sensors,'r-')
 
-    obstacle_radius = obstacles[0].radius
-    gui_obstacles, = ax.plot([], [], 'mo', ms=obstacle_radius * 2.5)
-
-    # Add x,y coordinates to series of points visited
-    self.x_path.append(self.x)
-    self.y_path.append(self.y)
-
-    if self.obstacles_flag:
+    if obstacles:
+      obstacle_radius = obstacles[0].radius
+      gui_obstacles, = ax.plot([], [], 'mo', ms=obstacle_radius * 2.5)
       gui_obstacles.set_data(obstacles_x, obstacles_y)
 
     # Draw path taken so far
@@ -441,14 +440,25 @@ class Robot_c:
     out.release()
 
 
+def add_obstacles(obstacles_x, obstacles_y):
+  for i, (x, y) in enumerate(zip(obstacles_x, obstacles_y)):
+    obstacles.append(Obstacle_c(x, y))
+
+
+
+
 # Create obstacles
 # num_obstacles = 4
 obstacles_x = [125, 150] # [125, 150, 130, 50]
 obstacles_y = [100, 50] # [100, 50, 175, 75]
 obstacles = []
 obstacles_xy = []
-for i, (x, y) in enumerate(zip(obstacles_x, obstacles_y)):
-  obstacles.append( Obstacle_c(x, y))
+
+
+add_obstacles(obstacles_x, obstacles_y)
+
+# for i, (x, y) in enumerate(zip(obstacles_x, obstacles_y)):
+#   obstacles.append( Obstacle_c(x, y))
   # obstacles_xy.append( [obstacles[i].x, obstacles[i].y] )
 
 # Create an instance of the simulated Robot at initial position
