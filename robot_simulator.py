@@ -460,18 +460,24 @@ class Robot_c:
 
 
 def add_obstacles(obstacles_x, obstacles_y):
-  for i, (x, y) in enumerate(zip(obstacles_x, obstacles_y)):
+  for x, y in zip(obstacles_x, obstacles_y):
     obstacles.append(Obstacle_c(x, y))
+
+def add_markers(markers_x, markers_y):
+  for x, y in zip(markers_x, markers_y):
+    markers.append(x, y)
 
 
 
 
 # Create obstacles
 # num_obstacles = 4
-obstacles_x = [125, 150] # [125, 150, 130, 50]
-obstacles_y = [100, 50] # [100, 50, 175, 75]
+# obstacles_x = [125, 150] # [125, 150, 130, 50]
+# obstacles_y = [100, 50] # [100, 50, 175, 75]
+
+
 obstacles = []
-obstacles_xy = []
+# obstacles_xy = []
 
 
 # add_obstacles(obstacles_x, obstacles_y)
