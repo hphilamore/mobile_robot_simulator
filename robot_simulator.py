@@ -45,6 +45,9 @@ class ProxSensor_c:
   # maximum scan range:
   max_range = 10
 
+  # angular range
+  angular_range = np.pi / 2
+
   # constructor. by default, sensor sits 10 distance forward
   # and faces 0 radians with respect to robot origin (0,0).
   def __init__(self, offset_dist=5, offset_angl=0):
@@ -75,17 +78,14 @@ class ProxSensor_c:
     # is now wrong.
     self.reading = -1
 
-  def scanFor( self, obstruction ):
+  def scanFor( self, obstruction, stall ):
+
+    stall_condition = 0
 
     # See if the obstruction is within the detection
     # range of the sensor.
     distance = np.sqrt( ((obstruction.x - self.x)**2) + ((obstruction.y - self.y)**2) )
     distance = distance - obstruction.radius
-
-    # if out of range, return error
-    # note: real sensors aren't this easy.
-    if distance > self.max_range:
-      return
 
     # compute this sensors angle toward the obstruction
     # (e.g. where is the object relative to the sensor?)
@@ -98,29 +98,43 @@ class ProxSensor_c:
     angle_between = atan2( sin(self.theta-a2o),  cos(self.theta-a2o) )
     angle_between = abs( angle_between )
 
+    # If the robot has stalled, detect if the object is in front of
+    # or behind the robot:
+    if stall==1:
+      if self.offset_angl == 0: # If the sensor is at the front
+        if angle_between < pi/2:
+          stall_condition = 1   # Obstruction in front
+        else:
+          stall_condition = -1  # Obstruction behind
+
     # If the detection is outside of the field of view
     # of the sensor, then we return and do nothing else.
     # This will either leave the reading as -1 (invalid)
     # for the next call.  Or leave the reading as the
     # last valid reading (>-1) it had.
-    if angle_between > np.pi/2:
-      return
+    if angle_between < self.angular_range:
+      # return
 
-    # If the current reading is -1 then that means
-    # this is the first valid reading, and we update
-    # the sensor.
-    if self.reading < 0:
-      self.reading = distance
+      # Detected object within range
+      # note: real sensors aren't this easy
+      if distance < self.max_range:
+        # return
 
-    # If the sensor already has a valid reading (>-1)
-    # from another obstacle then we only store the new
-    # reading if it is closer.
-    # (closer obstructions block the field of view)
-    if self.reading > 0:
-      if distance < self.reading:
-        self.reading = distance
+        # If the current reading is -1 then that means
+        # this is the first valid reading, and we update
+        # the sensor.
+        if self.reading < 0:
+          self.reading = distance
 
-    self.reading = distance
+        # If the sensor already has a valid reading (>-1)
+        # from another obstacle then we only store the new
+        # reading if it is closer.
+        # (closer obstructions block the field of view)
+        if self.reading > 0:
+          if distance < self.reading:
+            self.reading = distance
+    return stall_condition
+    # self.reading = distance
 
 # The model of the robot.
 class Robot_c:
@@ -134,6 +148,7 @@ class Robot_c:
     self.y = y
     self.theta = theta
     self.stall = -1 # to check for collisions
+    self.stall_condition = 0 # to check for direction of collision
     self.score = 0
     self.radius = 5 # 5cm radius
     self.wheel_sep = self.radius*2 # wheel on either side
@@ -189,17 +204,90 @@ class Robot_c:
     except OSError:
       print("Error occurred while deleting files.")
 
-    self.update_simulator()
+    self.update_visualisation()
 
-  def update_simulator(self):
+
+
+
+  def updatePosition( self, v, w ):
+
+    # clear stall flags
+    self.stall = -1
+    self.stall_condition = 0
+
+    # linear velocity can only be -1, 1 or 0
+    if v not in [1, -1]:
+      v = 0
+
+    # v can only be -1, 1 or 0
+    if w not in [1, -1]:
+      w = 0
+    else:
+      # convert w to 1 degree in rads
+      w = -w * pi/180
+
+    if v and w:
+      v = 0
+      w = 0
+
+    # # Save parameters for later.
+    # self.v = v
+    # self.w = w
 
     for obstacle in obstacles:
+      # Detect collision
       self.collisionCheck(obstacle)
+      # Update sensors and direction of obstacle
       self.updateSensors(obstacle)
 
     for i in range(self.n_sensors):
       print(f'sensor {i}= {round(self.prox_sensors[i].reading, 2)}', end='\t')
     print()
+
+    # Prevent robot from moving if obstructed
+    if v == 1 and self.stall_condition == 1:
+      v = 0
+    elif v == -1 and self.stall_condition == -1:
+      v = 0
+
+    # Save parameters for later.
+    self.v = v
+    self.w = w
+
+    
+    # robot matrix, contributions to motion x,y,theta
+    r_matrix = [v, 0, w]
+
+    # kinematic matrix
+    k_matrix = [
+                [ np.cos(self.theta),-np.sin(self.theta),0],
+                [ np.sin(self.theta), np.cos(self.theta),0],
+                [0,0,1]
+               ]
+
+    result_matrix = np.matmul(k_matrix, r_matrix)
+
+    # attempt move
+    self.x += result_matrix[0]
+    self.y += result_matrix[1]
+    self.theta -= result_matrix[2]
+
+    # Once we have updated the robots new global position
+    # we should also update the position of its sensor(s)
+    for prox_sensor in self.prox_sensors:
+      prox_sensor.updateGlobalPosition( self.x, self.y, self.theta )
+
+    self.update_visualisation()
+
+  def update_visualisation(self):
+
+    # for obstacle in obstacles:
+    #   self.collisionCheck(obstacle)
+    #   self.updateSensors(obstacle)
+    #
+    # for i in range(self.n_sensors):
+    #   print(f'sensor {i}= {round(self.prox_sensors[i].reading, 2)}', end='\t')
+    # print()
 
 
     # Setup plot
@@ -210,13 +298,13 @@ class Robot_c:
                          ylim=(0, self.arena_width))
 
     # Initialise plotted robot
-    gui_robot, = ax.plot([], [], 'bo', ms=self.radius * 2)
+    gui_robot, = ax.plot([], [], 'bo', ms=self.radius * 2.5)
     gui_dir, = ax.plot([], [], 'k-')
     gui_path, = ax.plot([], [], 'r:')
     gui_sensor = ax.plot(*[[],[]]*self.n_sensors,'r-')
 
     obstacle_radius = obstacles[0].radius
-    gui_obstacles, = ax.plot([], [], 'mo', ms=obstacle_radius*2)
+    gui_obstacles, = ax.plot([], [], 'mo', ms=obstacle_radius * 2.5)
 
     # Add x,y coordinates to series of points visited
     self.x_path.append(self.x)
@@ -266,70 +354,15 @@ class Robot_c:
     # Update timestep
     self.t += 1
 
-
-  def updatePosition( self, v, w ):
-
-    # linear velocity can only be -1, 1 or 0
-    if v not in [1, -1]:
-      v = 0
-
-    # v can only be -1, 1 or 0
-    if w not in [1, -1]:
-      w = 0
-    else:
-      # convert w to 1 degree in rads
-      w = -w * pi/180
-
-    if v and w:
-      v = 0
-      w = 0
-
-    # Save parameters for later.
-    self.v = v
-    self.w = w
-
-    # clear stall flag, attempt move
-    self.stall = -1
-
-    # robot matrix, contributions to motion x,y,theta
-    r_matrix = [v, 0, w]
-
-    # kinematic matrix
-    k_matrix = [
-                [ np.cos(self.theta),-np.sin(self.theta),0],
-                [ np.sin(self.theta), np.cos(self.theta),0],
-                [0,0,1]
-               ]
-
-    result_matrix = np.matmul(k_matrix, r_matrix)
-
-    self.x += result_matrix[0]
-    self.y += result_matrix[1]
-    self.theta -= result_matrix[2]
-
-    # Once we have updated the robots new global position
-    # we should also update the position of its sensor(s)
-    for prox_sensor in self.prox_sensors:
-      prox_sensor.updateGlobalPosition( self.x, self.y, self.theta )
-
-    self.update_simulator()
-
   # The sensor checks if it is in range to an obstruction,
   # and if yes, calculates the simulated proximity reading.
   # if no, determines and error result.
-  def updateSensors(self, obstruction ):
-
-    # for each sensor
-    # for each obstruction
-    for prox_sensor in self.prox_sensors:
-      prox_sensor.scanFor( obstruction )
-
   def collisionCheck(self, obstruction ):
     distance = np.sqrt( ((obstruction.x - self.x)**2) + ((obstruction.y - self.y)**2) )
     distance -= self.radius
     distance -= obstruction.radius
 
-    print('distance= ', round(distance,2), end='\t')
+    # print('distance= ', round(distance,2), end='\t')
 
     # If distance from robot to object becomes negative,
     # transform to positive distance from robot to object
@@ -337,9 +370,22 @@ class Robot_c:
     if distance < 0:
       # Set a flag to show obstacle encountered
       self.stall = 1
-      angle = atan2( obstruction.y - self.y, obstruction.x - self.x)
-      self.x += distance * np.cos(angle)
-      self.y += distance * np.sin(angle)
+    #   angle = atan2( obstruction.y - self.y, obstruction.x - self.x)
+    #   self.x += distance * np.cos(angle)
+    #   self.y += distance * np.sin(angle)
+
+  def updateSensors(self, obstruction):
+
+    # self.stall_condition = 0
+
+    # for each sensor
+    # for each obstruction
+    for prox_sensor in self.prox_sensors:
+      stall_condition = prox_sensor.scanFor( obstruction, self.stall )
+      if self.stall_condition == 0:
+        self.stall_condition = stall_condition
+
+    print('stall condition= ', self.stall_condition, end='\t')
 
   def updateScore(self):
 
