@@ -321,9 +321,15 @@ class Robot_c:
     gui_sensor = ax.plot(*[[],[]]*self.n_sensors,'r-')
 
     if obstacles:
+      markers_x = []
+      markers_y = []
+      for obstacle in obstacles:
+        markers_x.append(obstacle.x)
+        markers_y.append(obstacle.y)
+
       obstacle_radius = obstacles[0].radius
       gui_obstacles, = ax.plot([], [], 'mo', ms=obstacle_radius * 2.5)
-      gui_obstacles.set_data(obstacles_x, obstacles_y)
+      gui_obstacles.set_data(markers_x, markers_y)
 
     # Draw path taken so far
     gui_path.set_data(self.x_path, self.y_path)
@@ -468,7 +474,7 @@ obstacles = []
 obstacles_xy = []
 
 
-add_obstacles(obstacles_x, obstacles_y)
+# add_obstacles(obstacles_x, obstacles_y)
 
 # for i, (x, y) in enumerate(zip(obstacles_x, obstacles_y)):
 #   obstacles.append( Obstacle_c(x, y))
