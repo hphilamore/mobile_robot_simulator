@@ -1,13 +1,26 @@
-from robot_simulator import *  # This line must be included at the START of your program
-from math import atan, pi
+from robot_simulator import *
 
-# Adds markers to the simulation
-add_markers([50, 116, 63], 
-            [75, 60, 154])
+# The square has 4 sides
+sides = 3
 
-# Updates the simulation (moves the robot)
-update_simulation(0, 0)
+side_length = 50
 
-print(robot.x, robot.y)
+# Calculate external angle
+external_angle = int(360 / sides)
 
-save_simulation_data()        # Outputs simulation as video and text file
+# Turn
+for k in range(external_angle-90):
+    update_simulation(0, 1)  # v = 0 and w = 1
+
+# Use of nested loops
+for i in range(sides):
+
+    # Move straight
+    for j in range(side_length):
+        update_simulation(1, 0)  # v = 1 and w = 0
+
+    # Turn
+    for k in range(external_angle):
+        update_simulation(0, 1)  # v = 0 and w = 1
+
+save_simulation_data() 

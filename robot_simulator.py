@@ -182,6 +182,7 @@ class Robot_c:
                         pi,
                         ]
     self.n_sensors = len(self.sensor_dirs)
+    self.sensor_readings = []
 
     self.prox_sensors = [] #= ProxSensor_c()
     for i in range(0,self.n_sensors):
@@ -240,8 +241,11 @@ class Robot_c:
         # Update sensors and direction of obstacle
         self.updateSensors(obstacle)
 
+    self.sensor_readings = []
+
     for i in range(self.n_sensors):
       print(f'sensor {i}= {round(self.prox_sensors[i].reading, 2)}', end='\t')
+      self.sensor_readings.append(round(self.prox_sensors[i].reading, 2))
     print()
 
     # Prevent robot from moving if obstructed
@@ -272,18 +276,27 @@ class Robot_c:
     self.y += result_matrix[1]
     self.theta -= result_matrix[2]
 
-    # Cap x and y position at limits of simulation arena
+    # If motion goes outside of arena, revert x and y to stay
+    # at current position
     if self.x > self.arena_width - self.radius:
-      self.x = self.arena_width - self.radius
+      self.stall = 1
+      self.x -= result_matrix[0]
+      self.y -= result_matrix[1]
 
     if self.x < self.radius:
-      self.x = self.radius
+      self.stall = 1
+      self.x -= result_matrix[0]
+      self.y -= result_matrix[1]
 
     if self.y > self.arena_width - self.radius:
-      self.y = self.arena_width - self.radius
+      self.stall = 1
+      self.y -= result_matrix[1]
+      self.x -= result_matrix[0]
 
     if self.y < self.radius:
-      self.y = self.radius
+      self.stall = 1
+      self.y -= result_matrix[1]
+      self.x -= result_matrix[0]
 
     # Once we have updated the robots new global position
     # we should also update the position of its sensor(s)
