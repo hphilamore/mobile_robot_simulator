@@ -8,18 +8,6 @@ from os.path import isfile, join
 
 class Obstacle_c:
 
-  # Assigns itself a random position within
-  # the arena, keeping a set distance from
-  # the centre
-  # def __init__(self, arena_size=200, radius=10, rot=0.0, max_obstacles=1):
-  #
-  #   self.radius = radius
-  #
-  #   # For defined placement
-  #   rot_ang = rot * ((np.pi*2)/max_obstacles)
-  #   rand_dist = np.random.uniform(.35, .65) * (arena_size/2)
-  #   self.x = (arena_size/2) + rand_dist*np.cos(rot_ang)
-  #   self.y = (arena_size/2) + rand_dist*np.sin(rot_ang)
   def __init__(self, x, y, radius=10):
 
     self.radius = radius
@@ -160,22 +148,7 @@ class Robot_c:
     self.output_video_filename = 'simulation_video.mp4'
     self.x_path = [] # a series of x coordinates of all points visited
     self.y_path = []  # a series of x coordinates of all points visited
-    # self.obstacles_flag = True
 
-    # self.obstacles_x = [125, 150, 130, 50]
-    # self.obstacles_y = [100, 50, 175, 75]
-
-    # This is the body plan of sensors from
-    # an e-puck robot! (in radians)
-    # self.sensor_dirs = [5.986479,
-    #                     5.410521,
-    #                     4.712389,
-    #                     3.665191,
-    #                     2.617994,
-    #                     1.570796,
-    #                     0.8726646,
-    #                     0.296706,
-    #                     ]
     self.sensor_dirs = [0,
                         pi/2,
                         pi*3/2,
@@ -200,11 +173,15 @@ class Robot_c:
         file_path = join(path_in, file)
         if isfile(file_path):
           remove(file_path)
-      # remove(self.output_video_filename)
       print("All files deleted successfully.")
     except OSError:
       print("Error occurred while deleting files.")
 
+    # remove(self.output_video_filename)
+    try:
+      remove(self.output_video_filename)
+    except OSError:
+      print("Error occurred while deleting video")
     self.update_visualisation()
 
 
@@ -392,6 +369,7 @@ class Robot_c:
     fig.canvas.draw()
     fig.canvas.flush_events()
     plt.savefig("img/{:05d}_{}".format(self.t, '.png')) # Use 02d modifierfor 5-digit numbers (zero-padded)
+    plt.close("all")
 
     # Update timestep
     self.t += 1
@@ -492,24 +470,8 @@ def add_markers(markers_x, markers_y):
     markers.append((x, y))
 
 
-
-
-# Create obstacles
-# num_obstacles = 4
-# obstacles_x = [125, 150] # [125, 150, 130, 50]
-# obstacles_y = [100, 50] # [100, 50, 175, 75]
-
-
 obstacles = []
 markers = []
-# obstacles_xy = []
-
-
-# add_obstacles(obstacles_x, obstacles_y)
-
-# for i, (x, y) in enumerate(zip(obstacles_x, obstacles_y)):
-#   obstacles.append( Obstacle_c(x, y))
-  # obstacles_xy.append( [obstacles[i].x, obstacles[i].y] )
 
 # Create an instance of the simulated Robot at initial position
 x_init = 100
