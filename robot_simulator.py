@@ -221,9 +221,9 @@ class Robot_c:
     self.sensor_readings = []
 
     for i in range(self.n_sensors):
-      print(f'sensor {i}= {round(self.prox_sensors[i].reading, 2)}', end='\t')
+      # print(f'sensor {i}= {round(self.prox_sensors[i].reading, 2)}', end='\t')
       self.sensor_readings.append(round(self.prox_sensors[i].reading, 2))
-    print()
+    # print()
 
     # Prevent robot from moving if obstructed
     if v == 1 and self.stall_condition == 1:
@@ -358,7 +358,7 @@ class Robot_c:
       gui_sensor[i].set_data((ox, tx), (oy, ty))
 
     msg = f'time = {self.t} \t \t x = {round(self.x, 3)} \t \t y = {round(self.y, 3)} \t \t theta = {round(self.theta, 3)}'
-    print(msg, end='\t')
+    # print(msg, end='\t')
 
     with open(self.output_data_filename, mode="a") as f:
       f.write(msg + '\n')
@@ -405,7 +405,7 @@ class Robot_c:
       if self.stall_condition == 0:
         self.stall_condition = stall_condition
 
-    print('stall condition= ', self.stall_condition, end='\t')
+    # print('stall condition= ', self.stall_condition, end='\t')
 
   def updateScore(self):
 

@@ -1,9 +1,12 @@
 from robot_simulator import *  # Starts simulator
 
-for i in range(50):
-    update_simulation(1, 0)  
+# Linear (forward) speed of robot
+v = 1
 
-for i in range(90):
-    update_simulation(0, 1)
+# Angular (turning) speed of robot
+w = 0
 
-save_simulation_data()        # Outputs simulation as video and text file
+# Updates the simulation (moves the robot)
+update_simulation(v, w)
+
+save_simulation_data()  # Outputs simulation as video and text file
